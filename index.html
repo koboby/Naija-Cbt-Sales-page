@@ -138,6 +138,7 @@ document.querySelectorAll('.buy-btn').forEach(btn=>btn.addEventListener('click',
   if(!response.ok)throw new Error(result.error||'Payment verification failed');
   modalText.textContent='Your payment is confirmed. Tap below to download and install Naija CBT.';
   document.getElementById('modalTitle').textContent='Your download is ready';
+  document.getElementById('downloadInstaller').href=result.downloadUrl;
   document.getElementById('downloadInstaller').style.display='inline-flex';
  }catch(error){
   modalText.textContent='We could not complete verification or licence delivery: '+error.message+'. Do not pay again yet. Please contact support with reference '+reference+'.';
