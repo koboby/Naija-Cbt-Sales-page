@@ -1,9 +1,9 @@
 "use strict";
 const { PLANS, json, paystack } = require("./_shared");
-const DOWNLOAD_URL = "https://github.com/koboby/NaijaCbt/releases/latest/download/Naija-CBT-Setup.exe";
+const DOWNLOAD_URL = process.env.APP_DOWNLOAD_URL || "";
 module.exports = async (req, res) => {
   if (req.method !== "GET" && req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
-  if (!process.env.PAYSTACK_SECRET_KEY) return json(res, 503, { error: "payment_not_configured" });
+  if (!process.env.PAYSTACK_SECRET_KEY || !DOWNLOAD_URL) return json(res, 503, { error: "payment_or_download_not_configured" });
   const reference = req.method === "GET" ? req.query?.reference : req.body?.reference;
   if (typeof reference !== "string" || reference.length < 8 || reference.length > 100) return json(res, 400, { error: "invalid_reference" });
   try {
