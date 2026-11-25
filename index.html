@@ -91,13 +91,13 @@ footer{padding:35px 0 45px;border-top:1px solid var(--line);margin-top:90px}.foo
 <article class="price-card reveal"><h3>Centre · 10 Computers</h3><p>For growing schools and practice centres.</p><div class="price">₦40,000</div><div class="price-note">One-time payment · Up to 10 computers</div><ul><li>One centre activation code</li><li>Up to 10 activated computers</li><li>Same Naija CBT application</li><li>Offline use after activation</li></ul><button class="btn btn-ghost buy-btn" data-plan="centre_10">Choose 10 Computers <span>→</span></button></article>
 <article class="price-card reveal"><h3>Centre · 20 Computers</h3><p>For larger schools and CBT centres.</p><div class="price">₦70,000</div><div class="price-note">One-time payment · Up to 20 computers</div><ul><li>One centre activation code</li><li>Up to 20 activated computers</li><li>Same Naija CBT application</li><li>Offline use after activation</li></ul><button class="btn btn-ghost buy-btn" data-plan="centre_20">Choose 20 Computers <span>→</span></button></article>
 </div>
-<p style="text-align:center;color:var(--muted);font-size:12px;margin:22px auto 0;max-width:720px">Personal and Centre are licence options for the same Naija CBT software. Each activation code enforces the device limit of the package purchased. Checkout is not live yet.</p>
+<p style="text-align:center;color:var(--muted);font-size:12px;margin:22px auto 0;max-width:720px">Personal and Centre are licence options for the same Naija CBT software. Each activation code enforces the device limit of the package purchased.</p>
 </section>
 <section id="faq">
 <div class="section-head reveal"><span class="kicker">GOOD QUESTIONS</span><h2>Before you get started.</h2></div>
 <div class="faq reveal">
 <details><summary>Does Naija CBT need internet every time I use it?</summary><p>No. Internet is required for the initial licence activation. After successful activation, the app is designed to support offline practice.</p></details>
-<details><summary>Can I use one Student Edition code on two laptops?</summary><p>Student Edition is designed for one licensed device. A code that has already been activated on another device cannot simply be reused on a second laptop.</p></details>
+<details><summary>Can I use one Student Edition code on two laptops?</summary><p>The Personal licence is for one computer. Centre licences are available for organisations that need multiple computers.</p></details>
 <details><summary>What if I run a school or tutorial centre?</summary><p>Choose the Centre Edition enquiry option. Centre licences are configured for an agreed number of devices.</p></details>
 <details><summary>How do I receive the app?</summary><p>The intended purchase flow is secure online payment followed by access to the Windows installer and your activation code. The payment and automated delivery connection must be configured before checkout goes live.</p></details>
 <details><summary>Are all past questions from every year included?</summary><p>Question coverage depends on the verified question bank shipped with the app. We will publish clear subject and year coverage rather than claim that unverified questions are official past questions.</p></details>
@@ -114,16 +114,41 @@ menu.addEventListener('click',()=>nav.classList.toggle('open'));
 nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>nav.classList.remove('open')));
 document.getElementById('year').textContent=new Date().getFullYear();
 const modal=document.getElementById('checkoutModal'),modalText=document.getElementById('modalText');
-document.querySelectorAll('.buy-btn').forEach(btn=>btn.addEventListener('click',()=>{
+document.querySelectorAll('.buy-btn').forEach(btn=>btn.addEventListener('click',async()=>{
  const plan=btn.dataset.plan;
- const url=window.NAIJACBT_CONFIG?.checkoutUrls?.[plan];
- if(url){window.location.href=url;return;}
- const labels={personal:'Personal (₦5,000; 1 computer)',centre_5:'Centre (₦25,000; 5 computers)',centre_10:'Centre (₦40,000; 10 computers)',centre_20:'Centre (₦70,000; 20 computers)'};
- modalText.textContent=labels[plan]+' has been selected. Checkout is not live yet; Paystack verification and automatic licence delivery must be connected before orders can be accepted.';
- modal.classList.add('show');
+ const email=window.prompt('Enter your email address for this test purchase:');
+ if(!email)return;
+ btn.disabled=true;btn.textContent='Connecting to secure checkout…';
+ try{
+  const response=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({planId:plan,email})});
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.error||'Checkout could not start');
+  window.location.href=result.authorizationUrl;
+ }catch(error){
+  modalText.textContent='Checkout is not ready yet: '+error.message+'. Please try again after the licensing service is configured.';
+  modal.classList.add('show');
+  btn.disabled=false;btn.textContent='Try again →';
+ }
 }));
-document.getElementById('closeModal').addEventListener('click',()=>modal.classList.remove('show'));
-modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('show')});
+(async()=>{
+ const params=new URLSearchParams(window.location.search);
+ if(params.get('payment')!=='verify')return;
+ const reference=params.get('reference');
+ if(!reference){modalText.textContent='We could not find the Paystack transaction reference. Please contact support before trying to pay again.';modal.classList.add('show');return;}
+ modalText.textContent='Verifying your payment securely. Please wait…';modal.classList.add('show');
+ try{
+  const response=await fetch('/api/verify?reference='+encodeURIComponent(reference));
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.error||'Payment verification failed');
+  modalText.textContent='Payment verified! Your activation code is: '+result.activationCode+'. Save it somewhere safe. Enter it in Naija CBT to activate your computer. This code allows '+result.maxDevices+' device(s).';
+  document.getElementById('modalTitle').textContent='Your Naija CBT activation code';
+  const close=document.getElementById('closeModal');close.textContent='Copy code';
+  close.onclick=async()=>{try{await navigator.clipboard.writeText(result.activationCode);close.textContent='Copied!';}catch(_){close.textContent='Select and copy the code above';}};
+ }catch(error){
+  modalText.textContent='We could not complete verification or licence delivery: '+error.message+'. Do not pay again yet. Please contact support with reference '+reference+'.';
+ }
+ history.replaceState({},'',window.location.pathname);
+})();
 const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target)}}),{threshold:.12});
 document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 </script>
