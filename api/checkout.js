@@ -2,7 +2,7 @@
 const { PLANS, json, paystack } = require("./_shared");
 module.exports = async (req, res) => {
   if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
-  if (!process.env.PAYSTACK_SECRET_KEY) return json(res, 503, { error: "payment_not_configured" });
+  if (!process.env.PAYSTACK_SECRET_KEY || !process.env.APP_DOWNLOAD_URL) return json(res, 503, { error: "payment_or_download_not_configured" });
   try {
     const { planId, email } = req.body || {};
     const plan = typeof planId === "string" ? PLANS[planId] : null;
