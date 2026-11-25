@@ -1,24 +1,27 @@
-# Naija CBT — Sales Website
+# Naija CBT Sales Website
 
-Premium responsive product landing page for the Naija CBT Windows desktop CBT practice app.
+Static sales page plus Vercel serverless API routes for Paystack checkout.
 
-## Preview locally
-Open `index.html` in a browser. No build step is required.
+## Vercel environment variables
 
-## Deploy with GitHub Pages
-1. Open repository Settings → Pages.
-2. Choose **Deploy from a branch**, branch `main`, folder `/ (root)`.
-3. Save and wait for GitHub Pages to publish.
+Set these for **Preview** while testing (and Production only when intentionally going live):
 
-A workflow is also included to publish the site using GitHub Pages Actions when Pages is enabled for the repository.
+- `PAYSTACK_SECRET_KEY`: Paystack test secret key (`sk_test_...`). Never expose it in browser code.
+- `LICENSING_API_URL`: HTTPS base URL of the separately deployed Naija CBT Licensing API, with no trailing slash.
+- `ADMIN_API_TOKEN`: same strong server-side token configured on the licensing API.
 
-## Before accepting payments
-The page intentionally does not pretend checkout is live. Purchase buttons show a setup notice until secure checkout URLs are configured. To launch real sales:
-- Choose a payment provider (Paystack is a sensible Nigeria-first option).
-- Implement a server-side checkout endpoint and verify payment webhooks.
-- After a verified, paid webhook, call the private licensing API to issue a unique code.
-- Deliver the activation code and installer securely; never expose the licensing admin token or signing private key in browser code.
-- Set `window.NAIJACBT_CONFIG.checkoutUrls.student` and `window.NAIJACBT_CONFIG.checkoutUrls.centre` only to real, tested checkout URLs.
+Redeploy after changing environment variables.
 
-## Product accuracy
-Keep exam-subject coverage, question counts, supported Windows versions, pricing and refund policy accurate. Do not describe generated practice questions as official past questions unless verified.
+## Test checkout
+
+The page calls `POST /api/checkout` with a selected plan and buyer email. The server initializes Paystack checkout. Paystack redirects back with a transaction reference. The page calls `GET /api/verify?reference=...`; the server verifies the transaction directly with Paystack and checks status, currency, amount, product and plan before asking the licensing API to issue a code.
+
+No browser-supplied payment-success flag is trusted. Do not use live keys until test transactions and activation tests pass.
+
+## Important deployment dependency
+
+The licensing API must be deployed and reachable over HTTPS, with durable database storage and its private signing key/admin token configured. The current SQLite licensing service is not suitable for ephemeral serverless storage without a persistent volume/database migration. Do not enable live sales until that is addressed.
+
+## Delivery limitation
+
+For the initial test, the verified activation code is shown on the return page for the buyer to copy. Automated email delivery is not included yet. The licensing API currently rejects duplicate payment references; if a payment is verified but issuance fails, inspect server logs and reconcile before retrying or issuing a second code.
